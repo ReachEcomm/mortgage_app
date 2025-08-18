@@ -1,22 +1,32 @@
 // app/api/lead/route.ts
 import { NextResponse } from 'next/server';
 
+// Improved handler: parse urlencoded body into JSON and forward as JSON to Zapier.
 export async function POST(req: Request) {
+  const zapierUrl = 'https://hooks.zapier.com/hooks/catch/20742109/u67siz4/';
+
   try {
-    // Body comes as urlencoded (from your form)
-    const body = await req.text();
+    // Read raw body (form is sent as application/x-www-form-urlencoded)
+    const raw = await req.text();
 
-    const zapierUrl = 'https://hooks.zapier.com/hooks/catch/20742109/u67siz4/';
+    // Parse urlencoded into an object
+    const params = new URLSearchParams(raw);
+    const payload: Record<string, string> = {};
+    for (const [k, v] of params.entries()) {
+      payload[k] = v;
+    }
 
+    // Forward as JSON to Zapier (more reliable than forwarding raw urlencoded)
     const resp = await fetch(zapierUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
 
     if (!resp.ok) {
-      console.error('Zapier webhook failed', resp.statusText);
-      return NextResponse.json({ error: 'Zapier error' }, { status: 500 });
+      const text = await resp.text().catch(() => resp.statusText || '');
+      console.error('Zapier webhook failed', resp.status, text);
+      return NextResponse.json({ error: 'Zapier webhook returned an error' }, { status: 502 });
     }
 
     return NextResponse.json({ ok: true });
