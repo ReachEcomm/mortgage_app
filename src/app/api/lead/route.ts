@@ -1,7 +1,8 @@
-// Server-only proxy: keeps your Zapier URL hidden.
-// Accepts standard form posts (application/x-www-form-urlencoded or multipart) and JSON.
+// app/api/lead/route.ts
+// Node runtime (default). Forwards form data to Zapier using a secret env var.
 
-export const runtime = 'edge'; // optional; works great on Webflow Cloud/Edge
+export const dynamic = 'force-dynamic'; // don't cache
+export const revalidate = 0;
 
 export async function POST(req: Request) {
   const zapierUrl = process.env.ZAPIER_HOOK_URL;
@@ -9,7 +10,7 @@ export async function POST(req: Request) {
     return new Response('Missing ZAPIER_HOOK_URL', { status: 500 });
   }
 
-  // Preserve the incoming body exactly so Zapier receives the same keys/values
+  // Keep incoming body exactly as-is so Zapier receives the same payload
   const contentType =
     req.headers.get('content-type') || 'application/x-www-form-urlencoded';
   const rawBody = await req.text();
@@ -20,10 +21,9 @@ export async function POST(req: Request) {
     body: rawBody,
   });
 
-  // Return tiny HTML so <iframe target> or fetch handlers can treat it as success
-  const ok = forward.ok ? 200 : 502;
+  // Tiny HTML response works for both fetch() and iframe targets
   return new Response('<!doctype html><title>ok</title>OK', {
-    status: ok,
+    status: forward.ok ? 200 : 502,
     headers: { 'Content-Type': 'text/html' },
   });
 }
