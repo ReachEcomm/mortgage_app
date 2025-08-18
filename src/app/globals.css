@@ -1,31 +1,68 @@
-/* If you want tailwind 'base' styles to override 'webflow' styles, re-order the layers */
-@layer properties, theme, base, webflow, components, utilities;
-
-/* Webflow global styles are imported in the 'webflow' layer */
-@import "../devlink/global.css" layer(webflow);
-@import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+:root{
+  --brand:#1e2147; /* deep navy like your screenshot */
+  --muted:#6b7280;
+  --border:#d1d5db;
+  --bg:#f8fafc;
+  --error:#b00020;
+  --success:#0a7d1e;
+  --radius:14px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  background:white; color:#0f172a
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.wrap{max-width:980px; margin-inline:auto; padding:24px 20px}
+h1{font-weight:700; text-align:center; margin:10px 0 18px; font-size:clamp(26px, 3.4vw, 40px)}
+
+/* Progress */
+.progress{display:flex; align-items:center; justify-content:center; gap:16px; margin:6px 0 28px}
+.pill{display:inline-flex; align-items:center; justify-content:center; width:44px; height:30px; border-radius:999px; font-weight:700; color:white; background:var(--brand); opacity:.4}
+.pill.active{opacity:1}
+.chev{width:70px; height:10px; background:linear-gradient(90deg,#cbd5e1,#94a3b8); clip-path:polygon(0 0, 92% 0, 100% 50%, 92% 100%, 0 100%); opacity:.65}
+
+/* Card */
+.card{background:white; border:1px solid var(--border); border-radius:var(--radius); padding:24px 22px; box-shadow:0 8px 28px rgba(0,0,0,.05)}
+.grid{display:grid; gap:18px}
+.row{display:grid; gap:8px}
+label{font-weight:700}
+.hint{color:var(--muted); font-size:.92rem}
+
+input[type="text"], input[type="email"], .radio-card, textarea{
+  border:1px solid var(--border); border-radius:12px; padding:12px 14px; font:inherit; background:white; width:100%;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.inline{display:grid; grid-template-columns:1fr; gap:12px}
+.actions{display:flex; gap:14px; justify-content:center; margin-top:10px; flex-wrap:wrap}
+
+button{
+  background:var(--brand); color:white; border:none; border-radius:12px; padding:12px 24px; font-weight:700; cursor:pointer; min-width:140px;
+}
+button.secondary{background:#0f172a0d; color:var(--brand); border:1px solid var(--border)}
+button[disabled]{opacity:.5; cursor:not-allowed}
+
+.choices{display:grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap:14px; margin-top:6px}
+.radio-card{display:flex; align-items:center; gap:10px; padding:14px}
+.radio-card input{width:18px; height:18px}
+
+.money{position:relative; max-width:480px}
+.money input{padding-left:28px}
+.money .prefix{position:absolute; inset:0 auto 0 10px; display:flex; align-items:center; color:#111827; pointer-events:none}
+
+.error{color:var(--error)}
+.success{color:var(--success)}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(1px,1px,1px,1px)}
+
+/* Responsive layout for larger screens */
+@media (min-width:640px){
+  .choices{grid-template-columns: repeat(3, minmax(0, 1fr));}
+  .inline{grid-template-columns: repeat(2, 1fr);}
+  .inline.three{grid-template-columns: 1fr 1fr 1fr;}
+}
+@media (min-width:900px){
+  .wrap{padding-top:36px}
+  .card{padding:28px}
 }
