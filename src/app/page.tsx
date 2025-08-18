@@ -93,6 +93,14 @@ export default function Page() {
       const data = new FormData(form);
       const urlEncoded = new URLSearchParams();
       data.forEach((v, k) => urlEncoded.append(k, String(v)));
+      // Debug: log outgoing payload so you can inspect in browser console
+      try {
+        // readable object
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        console.log('Submitting lead payload:', Object.fromEntries(urlEncoded.entries()));
+      } catch (e) {
+        console.log('Submitting lead payload (raw):', urlEncoded.toString());
+      }
 
       const resp = await fetch('/api/lead', {
         method: 'POST',
@@ -100,9 +108,22 @@ export default function Page() {
         body: urlEncoded.toString(),
       });
 
-      if (!resp.ok) throw new Error('Bad response');
+      // Attempt to read JSON response for better debugging
+      let respJson: any = null;
+      try {
+        respJson = await resp.json();
+      } catch (e) {
+        // not JSON or empty
+      }
+      console.log('Response from /api/lead:', resp.status, respJson);
 
-      setStatus({ type: 'ok', msg: '✅ Thanks! Your request was sent.' });
+      if (!resp.ok) {
+        const serverMsg = respJson?.error || respJson?.message || 'There was a problem sending your request. Please try again.';
+        setStatus({ type: 'err', msg: serverMsg });
+        return;
+      }
+
+      setStatus({ type: 'ok', msg: respJson?.ok ? '✅ Thanks! Your request was sent.' : (respJson?.message || '✅ Thanks! Your request was sent.') });
       form.reset();
       if (amountHiddenRef.current) amountHiddenRef.current.value = '';
       setStep(1);
