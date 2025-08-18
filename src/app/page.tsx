@@ -7,21 +7,19 @@ export default function Page() {
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<{ type: 'idle' | 'ok' | 'err'; msg?: string }>({ type: 'idle' });
 
-  // refs to fields we need to compose
   const formRef = useRef<HTMLFormElement>(null);
   const amountDisplayRef = useRef<HTMLInputElement>(null);
   const amountHiddenRef = useRef<HTMLInputElement>(null);
   const tsRef = useRef<HTMLInputElement>(null);
   const phoneFullRef = useRef<HTMLInputElement>(null);
 
-  // Helpers
   const pills = useMemo(() => [1, 2], []);
 
   const formatWithCommas = (value: string) => {
     if (!value) return '';
     const parts = value.replace(/[^0-9.]/g, '').split('.');
     const intPart = (parts[0] || '').replace(/^0+(?=\d)/, '');
-    const decPart = parts[1] ? parts[1].slice(0, 2) : undefined; // up to 2 decimals
+    const decPart = parts[1] ? parts[1].slice(0, 2) : undefined;
     const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     return decPart !== undefined ? `${withCommas}.${decPart}` : withCommas;
   };
@@ -74,7 +72,8 @@ export default function Page() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = formRef.current!;
-    // compose phone
+
+    // build phone
     const a = (form.elements.namedItem('phone_area') as HTMLInputElement).value.replace(/\D/g, '');
     const b = (form.elements.namedItem('phone_prefix') as HTMLInputElement).value.replace(/\D/g, '');
     const c = (form.elements.namedItem('phone_line') as HTMLInputElement).value.replace(/\D/g, '');
@@ -91,7 +90,6 @@ export default function Page() {
     setStatus({ type: 'idle' });
 
     try {
-      // POST as URL-encoded to match your current webhook expectations
       const data = new FormData(form);
       const urlEncoded = new URLSearchParams();
       data.forEach((v, k) => urlEncoded.append(k, String(v)));
@@ -134,9 +132,9 @@ export default function Page() {
 
       <form id="leadForm" className="card grid" acceptCharset="UTF-8" noValidate ref={formRef} onSubmit={handleSubmit}>
         {/* Step 1 */}
-        <section id="step1" className="grid" style={{ display: step === 1 ? 'grid' : 'none' }} aria-labelledby="s1-title">
+        <section id="step1" className="grid" style={{ display: step === 1 ? 'grid' : 'none' }}>
           <div className="row">
-            <label id="s1-title">
+            <label>
               Are you a homeowner in Ontario? <span className="error">*</span>
             </label>
             <div className="choices">
@@ -192,16 +190,14 @@ export default function Page() {
           </div>
 
           <div className="actions">
-            <button type="button" id="nextBtn" onClick={handleNext}>
-              Next
-            </button>
+            <button type="button" onClick={handleNext}>Next</button>
           </div>
         </section>
 
         {/* Step 2 */}
-        <section id="step2" className="grid" style={{ display: step === 2 ? 'grid' : 'none' }} aria-labelledby="s2-title">
+        <section id="step2" className="grid" style={{ display: step === 2 ? 'grid' : 'none' }}>
           <div className="row">
-            <label id="s2-title">
+            <label>
               Name <span className="error">*</span>
             </label>
             <div className="inline">
@@ -215,36 +211,27 @@ export default function Page() {
               Email <span className="error">*</span>
             </label>
             <input type="email" name="email" placeholder="home@owner.ca" required />
-            <span className="hint">Provide an email address you check frequently.</span>
           </div>
 
           <div className="row">
             <label>
               Phone <span className="error">*</span>
             </label>
-            <span className="hint">Enter the best number to reach you.</span>
             <div className="inline three">
               <input type="text" name="phone_area" maxLength={3} placeholder="###" required />
               <input type="text" name="phone_prefix" maxLength={3} placeholder="###" required />
               <input type="text" name="phone_line" maxLength={4} placeholder="####" required />
             </div>
-            <button className="secondary" type="button" tabIndex={-1}>
-              Include area code
-            </button>
           </div>
 
-          {/* Hidden composites & metadata */}
-          <input type="hidden" name="phone" id="phone_full" ref={phoneFullRef} />
+          {/* Hidden fields */}
+          <input type="hidden" name="phone" ref={phoneFullRef} />
           <input type="hidden" name="submitted_via" value="multi_step_contact" />
-          <input type="hidden" name="timestamp" id="ts" ref={tsRef} />
+          <input type="hidden" name="timestamp" ref={tsRef} />
 
           <div className="actions">
-            <button type="button" className="secondary" id="backBtn" onClick={handleBack}>
-              Back
-            </button>
-            <button type="submit" id="submitBtn" disabled={submitting}>
-              {submitting ? 'Sending…' : 'Submit'}
-            </button>
+            <button type="button" className="secondary" onClick={handleBack}>Back</button>
+            <button type="submit" disabled={submitting}>{submitting ? 'Sending…' : 'Submit'}</button>
           </div>
         </section>
 
