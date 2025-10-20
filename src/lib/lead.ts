@@ -1,12 +1,17 @@
 // src/lib/lead.ts
 export type LeadPayload = Record<string, string>;
 
-const ZAPIER_URL = 'https://hooks.zapier.com/hooks/catch/20742109/urbm2y8/';
+// require runtime environment variable; don't hard-code webhook URLs in source
+const ZAPIER_URL = process.env.ZAPIER_WEBHOOK_URL;
+if (!ZAPIER_URL) {
+  throw new Error('Missing required environment variable ZAPIER_WEBHOOK_URL');
+}
+const zapierUrl: string = ZAPIER_URL;
 
 export async function forwardToZapier(payload: LeadPayload) {
   // Send JSON to Zapier webhook and return a friendly result object
   try {
-    const resp = await fetch(ZAPIER_URL, {
+  const resp = await fetch(zapierUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
