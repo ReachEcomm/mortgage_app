@@ -1,0 +1,48 @@
+name: CI Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        env:
+          # If you rely on secrets like ZAPIER_WEBHOOK_URL in build step, add them in repo Settings > Secrets
+          ZAPIER_WEBHOOK_URL: ${{ secrets.ZAPIER_WEBHOOK_URL }}
+        run: npm run build
+
+      - name: Deploy to Webflow Cloud
+        # This step runs the project's `deploy` script (uses `webflow cloud deploy`).
+        # Add your Webflow Cloud token to repo Settings → Secrets as `WEBFLOW_API_TOKEN`.
+        env:
+          WEBFLOW_API_TOKEN: ${{ secrets.WEBFLOW_API_TOKEN }}
+          ZAPIER_WEBHOOK_URL: ${{ secrets.ZAPIER_WEBHOOK_URL }}
+        run: |
+          # If `webflow` CLI is not available, ensure it's installed or present in devDependencies.
+          # The project package.json has "deploy": "webflow cloud deploy" so this will call that script.
+          npm run deploy
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: .next
