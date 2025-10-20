@@ -1,7 +1,7 @@
 // src/lib/lead.ts
 export type LeadPayload = Record<string, string>;
 
-const ZAPIER_URL = 'https://hooks.zapier.com/hooks/catch/20742109/u67siz4/';
+const ZAPIER_URL = 'https://hooks.zapier.com/hooks/catch/20742109/urbm2y8/';
 
 export async function forwardToZapier(payload: LeadPayload) {
   // Send JSON to Zapier webhook and return a friendly result object
