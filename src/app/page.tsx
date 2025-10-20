@@ -96,9 +96,8 @@ export default function Page() {
       // Debug: log outgoing payload so you can inspect in browser console
       try {
         // readable object
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         console.log('Submitting lead payload:', Object.fromEntries(urlEncoded.entries()));
-      } catch (e) {
+      } catch {
         console.log('Submitting lead payload (raw):', urlEncoded.toString());
       }
 
@@ -109,21 +108,27 @@ export default function Page() {
       });
 
       // Attempt to read JSON response for better debugging
-      let respJson: any = null;
+      let respJson: unknown = null;
       try {
         respJson = await resp.json();
-      } catch (e) {
+      } catch {
         // not JSON or empty
       }
       console.log('Response from /api/lead:', resp.status, respJson);
 
+      const asRecord = (o: unknown): Record<string, unknown> | null => (o && typeof o === 'object' ? (o as Record<string, unknown>) : null);
+
       if (!resp.ok) {
-        const serverMsg = respJson?.error || respJson?.message || 'There was a problem sending your request. Please try again.';
+        const r = asRecord(respJson);
+        const serverMsg = (r && typeof r.error === 'string' && r.error) || (r && typeof r.message === 'string' && r.message) || 'There was a problem sending your request. Please try again.';
         setStatus({ type: 'err', msg: serverMsg });
         return;
       }
 
-      setStatus({ type: 'ok', msg: respJson?.ok ? '✅ Thanks! Your request was sent.' : (respJson?.message || '✅ Thanks! Your request was sent.') });
+      const rOk = asRecord(respJson);
+      const okFlag = !!(rOk && typeof rOk.ok === 'boolean' && rOk.ok);
+      const okMsg = okFlag ? '✅ Thanks! Your request was sent.' : ((rOk && typeof rOk.message === 'string' && rOk.message) || '✅ Thanks! Your request was sent.');
+      setStatus({ type: 'ok', msg: okMsg });
       form.reset();
       if (amountHiddenRef.current) amountHiddenRef.current.value = '';
       setStep(1);
