@@ -1,32 +1,68 @@
-// app/api/lead/route.ts
 import { NextResponse } from 'next/server';
-import { forwardToZapier, basicValidate } from '@/lib/lead';
+import { forwardToZapier, basicValidate, LeadPayload } from '@/lib/lead';
 
-// parse urlencoded body and reuse forwarding logic in src/lib/lead
+const ALLOWED_ORIGINS = new Set<string>([
+  'https://lighthouse-b66d3f.webflow.io',   // staging
+  'https://www.lighthouselending.ca',       // production
+  'http://localhost:3000',                  // local dev
+  'http://127.0.0.1:3000',                  // local dev
+]);
+
+function corsHeaders(origin: string | null) {
+  const allowed = origin && ALLOWED_ORIGINS.has(origin) ? origin : '';
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Vary': 'Origin',
+  };
+}
+
+export async function OPTIONS(req: Request) {
+  const origin = req.headers.get('origin');
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders(origin),
+  });
+}
+
 export async function POST(req: Request) {
+  const origin = req.headers.get('origin');
+  const headers = corsHeaders(origin);
+
   try {
-    const raw = await req.text();
-    const params = new URLSearchParams(raw);
-    const payload: Record<string, string> = {};
-    for (const [k, v] of params.entries()) payload[k] = v;
+    const incoming = (await req.json()) as Partial<LeadPayload>;
 
-    // basic validation
-    const errs = basicValidate(payload);
-    if (errs.length) return NextResponse.json({ error: 'Missing fields', fields: errs }, { status: 400 });
-
-    if (payload.phone) payload.phone_digits = payload.phone.replace(/\D/g, '');
-
-    const res = await forwardToZapier(payload);
-    if (!res.ok) {
+    // 🔒 Server-side validation (lightweight)
+    const errors = basicValidate(incoming);
+    if (errors.length) {
       return NextResponse.json(
-        { error: 'Zapier error', zapierStatus: res.status, zapierBodySnippet: res.bodySnippet },
-        { status: 502 }
+        { ok: false, status: 400, errors },
+        { status: 400, headers }
       );
     }
 
-    return NextResponse.json({ ok: true }, { status: 201 });
-  } catch (err) {
-    console.error('Lead submission failed', err);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    // 🧩 Normalize data
+    const amountNum = Number(incoming.amount);
+    const payload: LeadPayload = {
+      ...incoming,
+      amount: isNaN(amountNum) ? 0 : amountNum,
+      timestamp: incoming.timestamp || new Date().toISOString(),
+      company: incoming.company || 'Lighthouse Lending',
+    } as LeadPayload;
+
+    // 🚀 Send to Zapier using your env var
+    const result = await forwardToZapier(payload, { timeoutMs: 15000 });
+
+    return NextResponse.json(
+      { ok: result.ok, status: result.status },
+      { status: result.ok ? 200 : 502, headers }
+    );
+  } catch (err: any) {
+    console.error('API /lead error:', err);
+    return NextResponse.json(
+      { ok: false, status: 500, message: 'Internal server error' },
+      { status: 500, headers }
+    );
   }
 }

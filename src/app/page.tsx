@@ -1,270 +1,277 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
-export default function Page() {
-  const [step, setStep] = useState<1 | 2>(1);
+// Main Form Component
+export default function LeadFormPage() {
+  const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
-  const [status, setStatus] = useState<{ type: 'idle' | 'ok' | 'err'; msg?: string }>({ type: 'idle' });
+  const [thankYou, setThankYou] = useState(false);
+  const [duplicate, setDuplicate] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const formRef = useRef<HTMLFormElement>(null);
-  const amountDisplayRef = useRef<HTMLInputElement>(null);
-  const amountHiddenRef = useRef<HTMLInputElement>(null);
-  const tsRef = useRef<HTMLInputElement>(null);
-  const phoneFullRef = useRef<HTMLInputElement>(null);
+  const [formData, setFormData] = useState({
+    homeowner: '',
+    mortgage_need: '',
+    amount: '',
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    utm_source: '',
+    utm_medium: '',
+    utm_campaign: '',
+    utm_term: '',
+    utm_content: '',
+    utm_id: '',
+    gclid: '',
+    fbclid: '',
+    referrer: '',
+  });
 
-  const pills = useMemo(() => [1, 2], []);
+  const THANKYOU_DELAY_MS = 1000;
 
-  const formatWithCommas = (value: string) => {
-    if (!value) return '';
-    const parts = value.replace(/[^0-9.]/g, '').split('.');
-    const intPart = (parts[0] || '').replace(/^0+(?=\d)/, '');
-    const decPart = parts[1] ? parts[1].slice(0, 2) : undefined;
-    const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return decPart !== undefined ? `${withCommas}.${decPart}` : withCommas;
+  // ----------------------------------------------------------
+  // UTM Tracking
+  // ----------------------------------------------------------
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = document.referrer || '';
+    setFormData(prev => ({
+      ...prev,
+      utm_source: params.get('utm_source') || '',
+      utm_medium: params.get('utm_medium') || '',
+      utm_campaign: params.get('utm_campaign') || '',
+      utm_term: params.get('utm_term') || '',
+      utm_content: params.get('utm_content') || '',
+      utm_id: params.get('utm_id') || '',
+      gclid: params.get('gclid') || '',
+      fbclid: params.get('fbclid') || '',
+      referrer: ref,
+    }));
+  }, []);
+
+  // ----------------------------------------------------------
+  // Field Handlers
+  // ----------------------------------------------------------
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const syncAmount = () => {
-    const el = amountDisplayRef.current!;
-    const hidden = amountHiddenRef.current!;
-    const start = el.selectionStart ?? el.value.length;
-    const prev = el.value;
-    const formatted = formatWithCommas(prev);
-    el.value = formatted;
-    hidden.value = formatted.replace(/,/g, '');
-    const diff = formatted.length - prev.length;
-    const pos = Math.max(0, start + diff);
-    requestAnimationFrame(() => el.setSelectionRange(pos, pos));
+  const handleNeedSelect = (value: string) => {
+    setFormData(prev => ({ ...prev, mortgage_need: value }));
   };
 
-  const normalizeAmountOnBlur = () => {
-    const hidden = amountHiddenRef.current!;
-    const el = amountDisplayRef.current!;
-    const v = hidden.value;
-    if (v) {
-      const fixed = Number(v).toFixed(2);
-      const [i, d] = fixed.split('.');
-      el.value = i.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '.' + d;
-      hidden.value = fixed;
-    }
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 15);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
   };
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value);
+    setFormData(prev => ({ ...prev, phone: formatted }));
+  };
+
+  // ----------------------------------------------------------
+  // Validation Helpers
+  // ----------------------------------------------------------
   const validateStep1 = () => {
-    const form = formRef.current!;
-    const hasHome = !!(form.querySelector('input[name="homeowner_ontario"]:checked') as HTMLInputElement | null);
-    const hasNeed = !!(form.querySelector('input[name="need_help"]:checked') as HTMLInputElement | null);
-    const amt = amountHiddenRef.current!.value.trim();
-    return hasHome && hasNeed && amt !== '' && !isNaN(Number(amt));
+    if (!formData.homeowner) return false;
+    if (!formData.mortgage_need) return false;
+    if (!formData.amount || Number(formData.amount.replace(/[^\d]/g, '')) < 1000)
+      return false;
+    return true;
   };
 
-  const handleNext = () => {
-    if (validateStep1()) {
-      setStep(2);
-      setStatus({ type: 'idle' });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      setStatus({ type: 'err', msg: 'Please complete all required fields on Step 1.' });
-    }
+  const validateStep2 = () => {
+    if (!formData.first_name || !formData.last_name) return false;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return false;
+    if (!formData.phone || formData.phone.replace(/\D/g, '').length < 10) return false;
+    return true;
   };
 
-  const handleBack = () => setStep(1);
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  // ----------------------------------------------------------
+  // Submit Logic
+  // ----------------------------------------------------------
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const form = formRef.current!;
-
-    // build phone
-    const a = (form.elements.namedItem('phone_area') as HTMLInputElement).value.replace(/\D/g, '');
-    const b = (form.elements.namedItem('phone_prefix') as HTMLInputElement).value.replace(/\D/g, '');
-    const c = (form.elements.namedItem('phone_line') as HTMLInputElement).value.replace(/\D/g, '');
-    phoneFullRef.current!.value = a && b && c ? `(${a}) ${b}-${c}` : '';
-
-    if (!form.checkValidity() || !validateStep1()) {
-      setStatus({ type: 'err', msg: 'Please fill all required contact details.' });
+    setError(null);
+    if (!validateStep2()) {
+      setError('Please fill out all required fields.');
       return;
     }
 
-    if (tsRef.current) tsRef.current.value = new Date().toISOString();
-
     setSubmitting(true);
-    setStatus({ type: 'idle' });
+
+    const payload = {
+      ...formData,
+      company: 'Lighthouse Lending',
+      amount: Number(formData.amount.replace(/[^\d]/g, '')),
+      timestamp: new Date().toISOString(),
+    };
 
     try {
-      const data = new FormData(form);
-      const urlEncoded = new URLSearchParams();
-      data.forEach((v, k) => urlEncoded.append(k, String(v)));
-      // Debug: log outgoing payload so you can inspect in browser console
-      try {
-        // readable object
-        console.log('Submitting lead payload:', Object.fromEntries(urlEncoded.entries()));
-      } catch {
-        console.log('Submitting lead payload (raw):', urlEncoded.toString());
-      }
-
-      const resp = await fetch('/api/lead', {
+      const res = await fetch('/api/lead', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: urlEncoded.toString(),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
 
-      // Attempt to read JSON response for better debugging
-      let respJson: unknown = null;
-      try {
-        respJson = await resp.json();
-      } catch {
-        // not JSON or empty
-      }
-      console.log('Response from /api/lead:', resp.status, respJson);
+      if (!res.ok) throw new Error('Network response not ok');
 
-      const asRecord = (o: unknown): Record<string, unknown> | null => (o && typeof o === 'object' ? (o as Record<string, unknown>) : null);
-
-      if (!resp.ok) {
-        const r = asRecord(respJson);
-        const serverMsg = (r && typeof r.error === 'string' && r.error) || (r && typeof r.message === 'string' && r.message) || 'There was a problem sending your request. Please try again.';
-        setStatus({ type: 'err', msg: serverMsg });
-        return;
-      }
-
-      const rOk = asRecord(respJson);
-      const okFlag = !!(rOk && typeof rOk.ok === 'boolean' && rOk.ok);
-      const okMsg = okFlag ? '✅ Thanks! Your request was sent.' : ((rOk && typeof rOk.message === 'string' && rOk.message) || '✅ Thanks! Your request was sent.');
-      setStatus({ type: 'ok', msg: okMsg });
-      form.reset();
-      if (amountHiddenRef.current) amountHiddenRef.current.value = '';
-      setStep(1);
-    } catch {
-      setStatus({ type: 'err', msg: 'There was a problem sending your request. Please try again.' });
-    } finally {
       setSubmitting(false);
+      setThankYou(true);
+      setTimeout(() => {
+        window.location.assign('/thank-you-page');
+      }, THANKYOU_DELAY_MS);
+    } catch (err: any) {
+      console.error(err);
+      setSubmitting(false);
+      setError('There was a problem submitting the form.');
     }
-  };
+  }
 
-  useEffect(() => {
-    if (tsRef.current) tsRef.current.value = new Date().toISOString();
-  }, []);
+  // ----------------------------------------------------------
+  // Step Transitions
+  // ----------------------------------------------------------
+  if (thankYou) {
+    return (
+      <div className="card p-8 text-center">
+        <div className="brand-check">✓</div>
+        <h3 className="title">Thanks! We’ve received your details.</h3>
+        <p className="subtitle">
+          A mortgage specialist from Lighthouse Lending will be in touch shortly.
+        </p>
+      </div>
+    );
+  }
 
+  // ----------------------------------------------------------
+  // UI Rendering
+  // ----------------------------------------------------------
   return (
-    <div className="wrap">
-      <h1>Secure Your Approval</h1>
+    <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
+      <h1 className="text-center text-3xl sm:text-4xl font-bold mb-8" style={{ color: 'var(--brand-navy)' }}>
+        Secure Your Approval
+      </h1>
 
-      <div className="progress" id="progress">
-        {pills.map((p) => (
-          <span key={p} className={`pill ${step === p ? 'active' : ''}`} data-step={p}>
-            {p}
-          </span>
-        ))}
-        <span className="chev" aria-hidden="true" />
+      {/* Progress Bar */}
+      <div className="mx-auto max-w-3xl mb-8">
+        <div className="stepper" aria-label="Form progress">
+          <div className="step-line" aria-hidden="true"></div>
+          <div
+            id="stepLineFill"
+            className="step-line-fill"
+            style={{ width: step === 1 ? '50%' : '100%' }}
+          ></div>
+          <div className={`step ${step === 1 ? 'active' : ''}`}><div className="circle">1</div><div className="label">Step 1</div></div>
+          <div className={`step ${step === 2 ? 'active' : ''}`}><div className="circle">2</div><div className="label">Step 2</div></div>
+        </div>
       </div>
 
-      <form id="leadForm" className="card grid" acceptCharset="UTF-8" noValidate ref={formRef} onSubmit={handleSubmit}>
-        {/* Step 1 */}
-        <section id="step1" className="grid" style={{ display: step === 1 ? 'grid' : 'none' }}>
-          <div className="row">
-            <label>
-              Are you a homeowner in Ontario? <span className="error">*</span>
-            </label>
-            <div className="choices">
-              <label className="radio-card">
-                <input type="radio" name="homeowner_ontario" value="Yes" required /> <span>Yes - check my options!</span>
-              </label>
-              <label className="radio-card">
-                <input type="radio" name="homeowner_ontario" value="No" required /> <span>No</span>
-              </label>
-            </div>
-          </div>
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        {step === 1 && (
+          <div id="step1" className="card p-6 sm:p-8 space-y-6">
+            <fieldset>
+              <legend className="text-base font-semibold" style={{ color: 'var(--brand-navy)' }}>
+                Are you a homeowner in Ontario? <span className="text-red-600">*</span>
+              </legend>
+              <div className="flex flex-wrap gap-6 mt-2" role="radiogroup">
+                {['Yes', 'No'].map(opt => (
+                  <label key={opt} className="inline-flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="homeowner"
+                      value={opt}
+                      checked={formData.homeowner === opt}
+                      onChange={handleChange}
+                    />
+                    <span>{opt}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
 
-          <div className="row">
-            <label>
-              What do you need help with most right now? <span className="error">*</span>
-            </label>
-            <div className="choices">
-              {[
-                'Consolidate Debt',
-                'Home Equity Line of Credit',
-                'Home Equity Loan',
-                'Refinance',
-                'Renewal',
-                'Reverse Mortgage',
-              ].map((opt) => (
-                <label className="radio-card" key={opt}>
-                  <input type="radio" name="need_help" value={opt} required /> <span>{opt}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+            <fieldset>
+              <legend className="text-base font-semibold" style={{ color: 'var(--brand-navy)' }}>
+                What do you need help with most right now? <span className="text-red-600">*</span>
+              </legend>
+              <div id="needGroup" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  'Consolidate Debt',
+                  'Home Equity Line of Credit',
+                  'Home Equity Loan',
+                  'Refinance',
+                  'Renewal',
+                  'Reverse Mortgage',
+                ].map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => handleNeedSelect(option)}
+                    className={`card-radio ${formData.mortgage_need === option ? 'selected' : ''}`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
 
-          <div className="row">
-            <label>
-              What&apos;s the amount you have in mind? <span className="error">*</span>
-            </label>
-            <span className="hint">An estimate is fine — we’ll work out the details together</span>
-            <div className="money">
-              <span className="prefix">$</span>
+            <div>
+              <label className="text-base font-semibold" style={{ color: 'var(--brand-navy)' }}>
+                What’s the amount you have in mind? <span className="text-red-600">*</span>
+              </label>
               <input
-                ref={amountDisplayRef}
                 type="text"
-                name="amount_display"
-                placeholder="0"
-                inputMode="decimal"
-                autoComplete="off"
-                required
-                onInput={syncAmount}
-                onBlur={normalizeAmountOnBlur}
+                name="amount"
+                value={formData.amount}
+                placeholder="e.g., 50,000"
+                onChange={handleChange}
+                className="w-full rounded-2xl border px-4 py-3 focus:outline-none focus:ring-4 ring-blue-100"
               />
-              <input ref={amountHiddenRef} type="hidden" name="amount" />
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                className="brand-btn-primary"
+                onClick={() => (validateStep1() ? setStep(2) : setError('Please complete all required fields.'))}
+              >
+                Continue →
+              </button>
             </div>
           </div>
+        )}
 
-          <div className="actions">
-            <button type="button" onClick={handleNext}>Next</button>
-          </div>
-        </section>
-
-        {/* Step 2 */}
-        <section id="step2" className="grid" style={{ display: step === 2 ? 'grid' : 'none' }}>
-          <div className="row">
-            <label>
-              Name <span className="error">*</span>
-            </label>
-            <div className="inline">
-              <input type="text" name="first_name" placeholder="John" required />
-              <input type="text" name="last_name" placeholder="MacDonald" required />
+        {step === 2 && (
+          <div id="step2" className="card p-6 sm:p-8 space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <input name="first_name" placeholder="John" onChange={handleChange} className="rounded-2xl border px-4 py-3" />
+              <input name="last_name" placeholder="Doe" onChange={handleChange} className="rounded-2xl border px-4 py-3" />
             </div>
-          </div>
 
-          <div className="row">
-            <label>
-              Email <span className="error">*</span>
-            </label>
-            <input type="email" name="email" placeholder="home@owner.ca" required />
-          </div>
-
-          <div className="row">
-            <label>
-              Phone <span className="error">*</span>
-            </label>
-            <div className="inline three">
-              <input type="text" name="phone_area" maxLength={3} placeholder="###" required />
-              <input type="text" name="phone_prefix" maxLength={3} placeholder="###" required />
-              <input type="text" name="phone_line" maxLength={4} placeholder="####" required />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <input name="email" placeholder="johndoe@email.com" onChange={handleChange} className="rounded-2xl border px-4 py-3" />
+              <input name="phone" placeholder="123-456-7890" value={formData.phone} onChange={handlePhoneChange} className="rounded-2xl border px-4 py-3" />
             </div>
+
+            <div className="flex items-center justify-between">
+              <button type="button" className="brand-btn-secondary" onClick={() => setStep(1)}>
+                ← Back
+              </button>
+              <button type="submit" className="brand-btn-primary" disabled={submitting}>
+                {submitting ? 'Sending…' : 'Submit'}
+              </button>
+            </div>
+
+            {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
           </div>
-
-          {/* Hidden fields */}
-          <input type="hidden" name="phone" ref={phoneFullRef} />
-          <input type="hidden" name="submitted_via" value="multi_step_contact" />
-          <input type="hidden" name="timestamp" ref={tsRef} />
-
-          <div className="actions">
-            <button type="button" className="secondary" onClick={handleBack}>Back</button>
-            <button type="submit" disabled={submitting}>{submitting ? 'Sending…' : 'Submit'}</button>
-          </div>
-        </section>
-
-        <p id="status" aria-live="polite" className={status.type === 'err' ? 'error' : status.type === 'ok' ? 'success' : ''}>
-          {status.msg}
-        </p>
+        )}
       </form>
-    </div>
+    </main>
   );
 }

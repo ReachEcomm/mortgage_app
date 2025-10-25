@@ -1,68 +1,349 @@
-:root{
-  --brand:#1e2147; /* deep navy like your screenshot */
-  --muted:#6b7280;
-  --border:#d1d5db;
-  --bg:#f8fafc;
-  --error:#b00020;
-  --success:#0a7d1e;
-  --radius:14px;
+/* =========================================================
+   LIGHTHOUSE LENDING — GLOBAL STYLES
+   ========================================================= */
+
+:root {
+  --brand-navy: #1F2740;
+  --progress: #F8C50E;
+  --blue-1: #22407F;
+  --blue-2: #3D74E5;
 }
 
-*{box-sizing:border-box}
-html,body{margin:0;padding:0}
-body{
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-  background:white; color:#0f172a
+/* ---------------------------------------------------------
+   BASE LAYOUT
+--------------------------------------------------------- */
+html, body {
+  font-family: "Montserrat", system-ui, -apple-system, Segoe UI, Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+  color: var(--brand-navy);
+  background: #fafafa;
+  margin: 0;
+  padding: 0;
 }
 
-.wrap{max-width:980px; margin-inline:auto; padding:24px 20px}
-h1{font-weight:700; text-align:center; margin:10px 0 18px; font-size:clamp(26px, 3.4vw, 40px)}
-
-/* Progress */
-.progress{display:flex; align-items:center; justify-content:center; gap:16px; margin:6px 0 28px}
-.pill{display:inline-flex; align-items:center; justify-content:center; width:44px; height:30px; border-radius:999px; font-weight:700; color:white; background:var(--brand); opacity:.4}
-.pill.active{opacity:1}
-.chev{width:70px; height:10px; background:linear-gradient(90deg,#cbd5e1,#94a3b8); clip-path:polygon(0 0, 92% 0, 100% 50%, 92% 100%, 0 100%); opacity:.65}
-
-/* Card */
-.card{background:white; border:1px solid var(--border); border-radius:var(--radius); padding:24px 22px; box-shadow:0 8px 28px rgba(0,0,0,.05)}
-.grid{display:grid; gap:18px}
-.row{display:grid; gap:8px}
-label{font-weight:700}
-.hint{color:var(--muted); font-size:.92rem}
-
-input[type="text"], input[type="email"], .radio-card, textarea{
-  border:1px solid var(--border); border-radius:12px; padding:12px 14px; font:inherit; background:white; width:100%;
+header {
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.inline{display:grid; grid-template-columns:1fr; gap:12px}
-.actions{display:flex; gap:14px; justify-content:center; margin-top:10px; flex-wrap:wrap}
-
-button{
-  background:var(--brand); color:white; border:none; border-radius:12px; padding:12px 24px; font-weight:700; cursor:pointer; min-width:140px;
+h1, h2, h3, legend {
+  color: var(--brand-navy);
 }
-button.secondary{background:#0f172a0d; color:var(--brand); border:1px solid var(--border)}
-button[disabled]{opacity:.5; cursor:not-allowed}
 
-.choices{display:grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap:14px; margin-top:6px}
-.radio-card{display:flex; align-items:center; gap:10px; padding:14px}
-.radio-card input{width:18px; height:18px}
-
-.money{position:relative; max-width:480px}
-.money input{padding-left:28px}
-.money .prefix{position:absolute; inset:0 auto 0 10px; display:flex; align-items:center; color:#111827; pointer-events:none}
-
-.error{color:var(--error)}
-.success{color:var(--success)}
-.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(1px,1px,1px,1px)}
-
-/* Responsive layout for larger screens */
-@media (min-width:640px){
-  .choices{grid-template-columns: repeat(3, minmax(0, 1fr));}
-  .inline{grid-template-columns: repeat(2, 1fr);}
-  .inline.three{grid-template-columns: 1fr 1fr 1fr;}
+/* Focus & Error */
+.focus-outline:focus {
+  outline: 3px solid rgba(61, 116, 229, 0.45);
+  outline-offset: 2px;
 }
-@media (min-width:900px){
-  .wrap{padding-top:36px}
-  .card{padding:28px}
+.error-ring {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25);
+}
+
+/* =========================================================
+   PROGRESS STEPPER
+========================================================= */
+.stepper {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  max-width: 480px;
+  margin: 2rem auto 3rem;
+}
+
+.stepper::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
+}
+
+.step-line-fill {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  height: 4px;
+  background: var(--progress);
+  border-radius: 2px;
+  width: 50%;
+  transition: width 0.4s ease;
+}
+
+.step {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.step .circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid #d1d5db;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--brand-navy);
+  transition: all 0.3s ease;
+}
+
+.step.active .circle {
+  background: var(--progress);
+  border-color: var(--progress);
+  color: #1f2937;
+}
+
+.step .label {
+  margin-top: 0.6rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* =========================================================
+   GRID LAYOUT
+========================================================= */
+.section-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .section-grid {
+    grid-template-columns: 5fr 7fr;
+    align-items: stretch;
+  }
+  .h-match {
+    height: 100%;
+  }
+}
+
+/* =========================================================
+   LEFT PANEL
+========================================================= */
+.left-panel {
+  border-radius: 1.5rem;
+  overflow: hidden;
+}
+
+.brand-gradient {
+  background: linear-gradient(135deg, var(--blue-1) 0%, var(--blue-2) 100%);
+  color: #fff;
+  border-radius: 1.5rem;
+  padding: 2.5rem 2rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.brand-gradient h2 {
+  font-size: 1.875rem;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+}
+
+.brand-gradient ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.icon-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: #fff;
+}
+
+.brand-gradient .footer-note {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: left;
+}
+
+/* =========================================================
+   CARD RADIO (STEP 1)
+========================================================= */
+.card-radio {
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  background: #fff;
+  min-height: 110px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.card-radio:hover {
+  border-color: #3d74e5;
+  background: rgba(61, 116, 229, 0.05);
+}
+
+.card-radio[aria-checked="true"] {
+  border-color: #3d74e5;
+  background: rgba(61, 116, 229, 0.05);
+  box-shadow: 0 0 0 3px rgba(61, 116, 229, 0.25);
+}
+
+/* =========================================================
+   FORM FIELDS
+========================================================= */
+form input {
+  border-radius: 1rem;
+  border: 1px solid #e5e7eb;
+  padding: 0.75rem 1rem;
+  width: 100%;
+  font-size: 1rem;
+  background-color: #fff;
+  transition: all 0.2s ease;
+}
+
+form input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(61, 116, 229, 0.2);
+  border-color: #3d74e5;
+}
+
+#step2 .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+.brand-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.75rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #fff;
+  background: linear-gradient(90deg, #3d74e5 0%, #22407f 100%);
+  box-shadow: 0 3px 8px rgba(61, 116, 229, 0.25);
+  transition: all 0.25s ease;
+}
+
+.brand-btn-primary:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(61, 116, 229, 0.35);
+}
+
+.brand-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 1.75rem;
+  border-radius: 9999px;
+  border: 2px solid #3d74e5;
+  font-weight: 500;
+  font-size: 1rem;
+  color: #22407f;
+  background-color: #fff;
+  transition: all 0.25s ease;
+}
+
+.brand-btn-secondary:hover {
+  background: rgba(61, 116, 229, 0.05);
+  color: #1f2740;
+}
+
+/* =========================================================
+   THANK YOU SCREEN
+========================================================= */
+.brand-check {
+  width: 64px;
+  height: 64px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #3d74e5 0%, #22407f 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 20px;
+  margin: 0 auto 0.75rem;
+}
+
+#thankYou .title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--brand-navy);
+  text-align: center;
+}
+#thankYou .subtitle {
+  color: #64748b;
+  text-align: center;
+}
+
+/* =========================================================
+   RESPONSIVE FIXES
+========================================================= */
+@media (max-width: 768px) {
+  .section-grid {
+    grid-template-columns: 1fr;
+  }
+  .brand-gradient {
+    border-radius: 1rem;
+    padding: 1.5rem;
+  }
+  input,
+  button.brand-btn-primary,
+  button.brand-btn-secondary {
+    width: 100%;
+  }
+  footer {
+    font-size: 0.75rem;
+    padding-bottom: 1rem;
+  }
+}
+
+/* Fix homeowner radio wrapping on mobile */
+@media (max-width: 640px) {
+  [aria-label="Homeowner in Ontario"] {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  [aria-label="Homeowner in Ontario"] label {
+    display: flex !important;
+    align-items: center;
+    gap: 0.6rem;
+    line-height: 1.4;
+    font-size: 1rem;
+    white-space: nowrap;
+  }
+
+  [aria-label="Homeowner in Ontario"] input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #3d74e5;
+  }
 }
